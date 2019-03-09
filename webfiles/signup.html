@@ -1,0 +1,81 @@
+<% template "_top.html" . %>
+
+<join-form>
+    <div id="join-form">
+        <div>
+            You can create account using this form
+        </div>
+        <div>
+            UserID :
+            <input
+                type="text"
+                v-model="userid"
+                class="userid"
+                name="userid"
+                placeholder="userid"
+            />
+        </div>
+        <div>
+            Password :
+            <input
+                type="password"
+                v-model="password"
+                class="password"
+                name="password"
+                placeholder="password"
+            />
+        </div>
+        <div>
+            Result
+            <pre v-html="result"></pre>
+        </div>
+        <button type="button" class="btn-join" v-on:click="do_join">
+            Join
+        </button>
+    </div>
+    <script type="vue">
+        data: function() {
+            var obj = {
+                userid: "",
+                password: "",
+                result: ""
+            };
+            return obj;
+        },
+        methods: {
+            do_join: function() {
+                if(this.userid.length == 0) {
+                    alert("Please enter userid");
+                    return;
+                }
+                if(this.password.length == 0) {
+                    alert("Please enter password");
+                    return;
+                }
+
+                var key = this.getKeyPair(this.userid, this.password);
+                var pk = key.getPublic().encodeCompressed("hex");
+                this.$http.post("/api/accounts", {
+                    "public_key" : pk,
+                    "user_id" : this.userid,
+                }).then(function(res) {
+                    this.result = JSON.stringify(res.body);
+                }, function(err) {
+                    this.result = err;
+                });
+            },
+            getKeyPair: function(userid, userpw) {
+                userid = SHA2(userid);
+                userpw = SHA2(userpw);
+                var salt = SHA2("this is fleta sandbox");
+                var keyHex = SHA2(userid+"#"+userpw+"#"+salt);
+                var key = ec.keyPair({
+                    priv: keyHex,
+                    privEnc: "hex",
+                });
+                return key
+            }
+        }
+    </script>
+</join-form>
+<% template "_bottom.html" . %>
