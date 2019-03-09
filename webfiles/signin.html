@@ -35,6 +35,11 @@
         <button type="button" class="btn-login" v-on:click="do_login">
             Login
         </button>
+        <form action="/index" method="GET">
+            <input name="id" id="id" type="hidden"/>
+            <input name="pw" id="pw" type="hidden"/>
+            <input type="submit" value="Play" />
+        </form>
     </div>
     <script type="vue">
         data: function() {
@@ -58,12 +63,16 @@
                 }
 
                 var key = this.getKeyPair(this.userid, this.password);
+                document.getElementById('id').value = this.userid;
+                document.getElementById('pw').value = this.password;
+
                 var pk = key.getPublic().encodeCompressed("hex");
                 this.$http.get("/api/accounts?pubkey="+pk).then(function(res) {
                     window.address = res.body.address;
                     window.utxos = res.body.utxos;
                     window.key = key;
                     this.result = JSON.stringify(res.body);
+                   
 
                     if (location.protocol != 'https:')	{
                         var wsUri = "ws://"+window.location.host+"/websocket/"+window.address;
@@ -105,6 +114,7 @@
 
                             var msg = new Buffer(e.data, "hex");
                             var sig = window.key.sign(msg);
+
                             ws.send(buf2hex(sig.r.toArrayLike(Buffer, "be", 32)) + buf2hex(sig.s.toArrayLike(Buffer, "be", 32)) + "0" + sig.recoveryParam);
                         } else {
                             var noti = null;

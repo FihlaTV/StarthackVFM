@@ -304,22 +304,32 @@ func main() {
 			}
 		}
 	})
-    e.File("/signin", "signin.html")
+
+	e.GET("/", func(c echo.Context) error {
+		args := make(map[string]interface{})
+		args["test_arg_key"] = "test_arg_value"
+		return c.Render(http.StatusOK, "signup.html", args)
+	}, webChecker)
+
+	e.GET("/signup", func(c echo.Context) error {
+		args := make(map[string]interface{})
+		args["test_arg_key"] = "test_arg_value"
+		return c.Render(http.StatusOK, "signup.html", args)
+	}, webChecker)
 
 	e.GET("/signin", func(c echo.Context) error {
 		args := make(map[string]interface{})
 		args["test_arg_key"] = "test_arg_value"
 		return c.Render(http.StatusOK, "signin.html", args)
-	  })
-	e.File("/signup", "signup.html");
-	e.File("/signin","signin.html");
-	e.File("/index","index.html");
+	  },webChecker)
 
-	// e.GET("/", func(c echo.Context) error {
-	// 	args := make(map[string]interface{})
-	// 	args["test_arg_key"] = "test_arg_value"
-	// 	return c.Render(http.StatusOK, "rikki.html", args)
-	// }, webChecker)
+	  e.GET("/index", func(c echo.Context) error {
+		args := make(map[string]interface{})
+		args["id"] = c.FormValue("id")
+		args["pw"] = c.FormValue("pw")
+		return c.Render(http.StatusOK, "index.html", args)
+	}, webChecker)
+
 
 	gAPI := e.Group("/api")
 	gAPI.GET("/chain/height", func(c echo.Context) error {

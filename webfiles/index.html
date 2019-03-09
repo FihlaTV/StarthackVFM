@@ -3,19 +3,17 @@
 <hr />
 
 <div>This argument come from server's c.Render()<br /></div>
-<div>
-    test_arg_key : <% index . "test_arg_key" %>
-</div>
+
+<input id="id" type="hidden" value="<% index . "id" %>" /> <input id="pw"
+type="hidden" value="<% index . "pw" %>" />
 
 <hr />
 
-
 <hr />
-
 
 <hr />
 <game-form>
-    <div id="game-form">
+    <div id="game-form" v-on:load="signin">
         <div>
             You can get a game data using this form<br />
             You can acquire your address when login
@@ -33,32 +31,126 @@
         <div>
             Result
             <pre v-html="result"></pre>
-        </div>
+		</div>
+		<button type="button" class="btn-send" v-on:click="signin">
+			Signin
+		</button>
         <button type="button" class="btn-send" v-on:click="do_send">
             Send
         </button>
     </div>
     <script type="vue">
-        data: function() {
-        	var obj = {
-        		address: "",
-        		result: ""
-        	};
-        	return obj;
-        },
-        methods: {
-        	do_send: function() {
-        		if(this.address.length == 0) {
-        			alert("Please enter address");
-        			return;
-        		}
-        		this.$http.get("/api/games/" + this.address).then(function(res) {
-        			this.result = JSON.stringify(res.body);
-        		}, function(err) {
-        			this.result = err;
-        		});
-        	}
-        }
+            data: function() {
+                var obj = {
+              		address: "",
+                    result: ""
+              	};
+            	return obj;
+            },
+            methods: {
+			signin: function(){
+
+				function getKeyPair(userid, userpw) {
+                    userid = SHA2(userid);
+                    userpw = SHA2(userpw);
+                    var salt = SHA2("this is fleta sandbox");
+                    var keyHex = SHA2(userid+"#"+userpw+"#"+salt);
+                    var key = ec.keyPair({
+                        priv: keyHex,
+                        privEnc: "hex",
+                    });
+                    return key
+                }
+				var key = getKeyPair(document.getElementById("id").value, document.getElementById("pw").value);
+
+                      var pk = key.getPublic().encodeCompressed("hex");
+                      this.$http.get("/api/accounts?pubkey="+pk).then(function(res) {
+                          window.address = res.body.address;
+                          window.utxos = res.body.utxos;
+                          window.key = key;
+                          this.result = JSON.stringify(res.body);
+
+
+                          if (location.protocol != 'https:')	{
+                              var wsUri = "ws://"+window.location.host+"/websocket/"+window.address;
+                          } else {
+                              var wsUri = "wss://"+window.location.host+"/websocket/"+window.address;
+                          }
+                          function connect() {
+                              var ws = new WebSocket(wsUri)
+                              ws._init = false;
+                              ws.onopen = function(e) { onOpen(ws, e) };
+                              ws.onclose = function(e) { onClose(ws, e) };
+                              ws.onerror = function(e) { onError(ws, e) };
+                              ws.onmessage = function(e) { onMessage(ws, e) };
+                              return ws;
+                          }
+                          var ws = connect();
+                          var disconnectedCount = 0;
+                          function onOpen(ws,  e) {
+                              disconnectedCount = 1;
+                              console.log("CONNECTED");
+                          }
+                          function onClose(ws,  e) {
+                              disconnectedCount = (disconnectedCount+1) * 2;
+                              console.log("DISCONNECTED");
+                              (function () {
+                                  setTimeout(function () {
+                                      ws = connect();
+                                  }, 1000*disconnectedCount);
+                              })();
+                          }
+                          function onError(ws,  e) {
+                              console.log("ERROR", e);
+                          }
+
+                          var _this = this;
+                          function onMessage(ws,  e) {
+                              if(!ws._init) {
+                                  ws._init = true;
+
+                                  var msg = new Buffer(e.data, "hex");
+                                  var sig = window.key.sign(msg);
+
+                                  ws.send(buf2hex(sig.r.toArrayLike(Buffer, "be", 32)) + buf2hex(sig.s.toArrayLike(Buffer, "be", 32)) + "0" + sig.recoveryParam);
+                              } else {
+                                  var noti = null;
+                                  if (typeof e.data === "string") {
+                                      noti = JSON.parse(e.data);
+                                  } else {
+                                      noti = e.data;
+                                  }
+
+                                  switch(noti.type) {
+                                  case "add_count": //AddCount
+                                      _this.push += "<br/>" + JSON.stringify(noti);
+                                      break;
+                                  case "__CONNECT__": //duplicated connection
+                                      alert("Duplicated Connection");
+                                      location.reload();
+                                      break;
+                                  }
+                              }
+                          }
+
+                      }, function(err) {
+                          this.result = err;
+                      });
+
+            	if(this.address.length == 0) {
+            		alert("Please enter address");
+            		return;
+            	}
+			},
+            do_send: function() {
+               	this.$http.get("/api/games/" + this.address).then(function(res) {
+        		this.result = JSON.stringify(res.body);
+        			console.log(this.result);
+               	}, function(err) {
+               		this.result = err;
+               	});
+             }
+           }
     </script>
 </game-form>
 
