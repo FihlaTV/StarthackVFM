@@ -1,89 +1,147 @@
-<!-- <!DOCTYPE html>
-<html lang="en" dir="ltr">
-  <head>
-    <meta charset="utf-8">
-    <title>WEB VR APP</title>
-    <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
-     <script src="https://unpkg.com/aframe-event-set-component@3.0.3/dist/aframe-event-set-component.min.js"></script>
-     <script src="https://unpkg.com/super-hands@2.1.0/dist/super-hands.min.js"></script>
-     <script src="//cdn.rawgit.com/donmccurdy/aframe-physics-system/v3.3.0/dist/aframe-physics-system.min.js"></script>
+<% template "_top.html" . %>
+<login-form>
+    <div id="login-form">
+        <div>
+            You can login with id and password using this form
+        </div>
+        <div>
+            UserID :
+            <input
+                type="text"
+                v-model="userid"
+                class="userid"
+                name="userid"
+                placeholder="userid"
+            />
+        </div>
+        <div>
+            Password :
+            <input
+                type="password"
+                v-model="password"
+                class="password"
+                name="password"
+                placeholder="password"
+            />
+        </div>
+        <div>
+            Result
+            <pre v-html="result"></pre>
+        </div>
+        <div>
+            Websocket Pushes
+            <pre v-html="push"></pre>
+        </div>
+        <button type="button" class="btn-login" v-on:click="do_login">
+            Login
+        </button>
+    </div>
+    <script type="vue">
+        data: function() {
+            var obj = {
+                userid: "",
+                password: "",
+                result: "",
+                push: ""
+            };
+            return obj;
+        },
+        methods: {
+            do_login: function() {
+                if(this.userid.length == 0) {
+                    alert("Please enter userid");
+                    return;
+                }
+                if(this.password.length == 0) {
+                    alert("Please enter password");
+                    return;
+                }
 
-  </head>
-  <body>
+                var key = this.getKeyPair(this.userid, this.password);
+                var pk = key.getPublic().encodeCompressed("hex");
+                this.$http.get("/api/accounts?pubkey="+pk).then(function(res) {
+                    window.address = res.body.address;
+                    window.utxos = res.body.utxos;
+                    window.key = key;
+                    this.result = JSON.stringify(res.body);
 
-  <a-scene physics = 'gravity: -9.8;'>
-    <a-entity progressive-controls></a-entity>
+                    if (location.protocol != 'https:')	{
+                        var wsUri = "ws://"+window.location.host+"/websocket/"+window.address;
+                    } else {
+                        var wsUri = "wss://"+window.location.host+"/websocket/"+window.address;
+                    }
+                    function connect() {
+                        var ws = new WebSocket(wsUri)
+                        ws._init = false;
+                        ws.onopen = function(e) { onOpen(ws, e) };
+                        ws.onclose = function(e) { onClose(ws, e) };
+                        ws.onerror = function(e) { onError(ws, e) };
+                        ws.onmessage = function(e) { onMessage(ws, e) };
+                        return ws;
+                    }
+                    var ws = connect();
+                    var disconnectedCount = 0;
+                    function onOpen(ws,  e) {
+                        disconnectedCount = 1;
+                        console.log("CONNECTED");
+                    }
+                    function onClose(ws,  e) {
+                        disconnectedCount = (disconnectedCount+1) * 2;
+                        console.log("DISCONNECTED");
+                        (function () {
+                            setTimeout(function () {
+                                ws = connect();
+                            }, 1000*disconnectedCount);
+                        })();
+                    }
+                    function onError(ws,  e) {
+                        console.log("ERROR", e);
+                    }
 
-    <a-assets>
-      <a-asset-item src = '{% static 'webvrapp/images/scene.gltf' %}' id = 'shelf'></a-asset-item>
-    </a-assets>
+                    var _this = this;
+                    function onMessage(ws,  e) {
+                        if(!ws._init) {
+                            ws._init = true;
 
-    <a-plane  static-body width = '5' height = '5' position = '0 0 0' rotation = '-90 0 0' scale = '1000 1000'
-            material = 'src: {% static 'webvrapp/images/shelf.jpg' %};
-                        repeat: 5000 5000;
-                        normal-map:{% static 'webvrapp/images/shelfNormal.jpg' %};
-                        normal-texture-repeat: 5000 5000;'
+                            var msg = new Buffer(e.data, "hex");
+                            var sig = window.key.sign(msg);
+                            ws.send(buf2hex(sig.r.toArrayLike(Buffer, "be", 32)) + buf2hex(sig.s.toArrayLike(Buffer, "be", 32)) + "0" + sig.recoveryParam);
+                        } else {
+                            var noti = null;
+                            if (typeof e.data === "string") {
+                                noti = JSON.parse(e.data);
+                            } else {
+                                noti = e.data;
+                            }
 
-    ></a-plane>
+                            switch(noti.type) {
+                            case "add_count": //AddCount
+                                _this.push += "<br/>" + JSON.stringify(noti);
+                                break;
+                            case "__CONNECT__": //duplicated connection
+                                alert("Duplicated Connection");
+                                location.reload();
+                                break;
+                            }
+                        }
+                    }
 
-    <a-box id = 'record-5' dynamic-body color="#FFAA00" position="-2 5.26 -10" draggable grabbable
-            width = '0.2' height = '2' depth = '0.7' rotation = '0 10 10'>
-    </a-box>
-
-    <a-box id = 'record-1' dynamic-body color="#FFAA00" position="-1.5 5.26 -10" draggable grabbable
-            width = '0.2' height = '2' depth = '0.7' rotation = '0 10 10'>
-    </a-box>
-
-    <a-box id = 'record-2' dynamic-body color="#FFAA00" position="-1 5.26 -10" draggable grabbable
-            width = '0.2' height = '2' depth = '0.7' rotation = '0 10 10'>
-    </a-box>
-
-    <a-box id = 'record-3' dynamic-body color="#FFAA00" position="-0.5 5.26 -10" draggable grabbable
-            width = '0.2' height = '2' depth = '0.7' rotation = '0 10 10'>
-    </a-box>
-
-    <a-box id = 'record-4' dynamic-body color="#FFAA00" position="0 5.26 -10" draggable grabbable
-            width = '0.2' height = '2' depth = '0.7' rotation = '0 10 10'>
-    </a-box>
-
-      <a-box id = 'shelf-left-pane' static-body position="-2.5 5 -10"
-            position = '-2.5' width = '0.3' height = '2.3' depth = '1'
-            material = 'src: {% static 'webvrapp/images/shelf.jpg' %};
-                        repeat: 5 5;
-                        normal-map:{% static 'webvrapp/images/shelfNormal.jpg' %};
-                        normal-texture-repeat: 5 5;'>
-      </a-box>
-
-      <a-box id = 'shelf' static-body position="0 4 -10"
-             width = '5' height = '0.3' depth = '1'
-             material = 'src: {% static 'webvrapp/images/shelf.jpg' %};
-                         repeat: 5 5;
-                         normal-map:{% static 'webvrapp/images/shelfNormal.jpg' %};
-                         normal-texture-repeat: 5 5;'>>
-      </a-box>
-
-
-    <a-box id = 'jukebox' static-body id="blue"
-           color="#00AAFF" position="5 1 -10" width = '3' height = '2' depth = '3' droppable
-           event-set__color="_event: collide; material.color: #0055AA">
-    </a-box>
-
-
- 
-</a-scene>
-</body> 
-</html>     -->
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Page Title</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" media="screen" href="main.css">
-    <script src="main.js"></script>
-</head>
-<body>
-    <H1>Hello World</H1>
-</body>
-</html>
+                }, function(err) {
+                    this.result = err;
+                });
+            },
+            getKeyPair: function(userid, userpw) {
+                userid = SHA2(userid);
+                userpw = SHA2(userpw);
+                var salt = SHA2("this is fleta sandbox");
+                var keyHex = SHA2(userid+"#"+userpw+"#"+salt);
+                var key = ec.keyPair({
+                    priv: keyHex,
+                    privEnc: "hex",
+                });
+                return key
+            }
+        }
+    </script>
+</login-form>
+<% template "_bottom.html" . %>
