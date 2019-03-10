@@ -3,23 +3,15 @@
 <script src="/public/js/sign/common.js"></script>
 <script src="/public/js/sign/crypto.min.js"></script>
 <script src="/public/js/sign/sha256.min.js"></script>
-<style>
-</style>
+
+
 </head>
 <body>
+		
 <div v-root-container>
-<hr />
-
-<div>This argument come from server's c.Render()<br /></div>
 
 <input id="id" type="hidden" value="<% index . "id" %>" /> <input id="pw"
 type="hidden" value="<% index . "pw" %>" />
-
-<hr />
-
-<hr />
-
-<hr />
 <game-form>
     <div id="game-form" v-on:load="signin">
         <div>
@@ -43,11 +35,13 @@ type="hidden" value="<% index . "pw" %>" />
 		<button type="button" class="btn-send" v-on:click="signin">
 			Signin
 		</button>
-        <button type="button" class="btn-send" v-on:click="do_send">
+        <button type="button" class="btn-send" v-on:click="signin();do_send();">
             Send
         </button>
-    </div>
+	</div>
+	
     <script type="vue">
+		
             data: function() {
                 var obj = {
               		address: "",
@@ -57,7 +51,7 @@ type="hidden" value="<% index . "pw" %>" />
             },
             methods: {
 			signin: function(){
-
+				if(flag){return;}
 				function getKeyPair(userid, userpw) {
                     userid = SHA2(userid);
                     userpw = SHA2(userpw);
@@ -148,7 +142,8 @@ type="hidden" value="<% index . "pw" %>" />
             	if(this.address.length == 0) {
             		alert("Please enter address");
             		return;
-            	}
+				}
+				flag = true;
 			},
             do_send: function() {
                	this.$http.get("/api/games/" + this.address).then(function(res) {

@@ -329,6 +329,12 @@ func main() {
 		args["pw"] = c.FormValue("pw")
 		return c.Render(http.StatusOK, "index.html", args)
 	}, webChecker)
+	e.GET("/upload", func(c echo.Context) error {
+		args := make(map[string]interface{})
+		// args["id"] = c.FormValue("id")
+		// args["pw"] = c.FormValue("pw")
+		return c.Render(http.StatusOK, "upload.html", args)
+	}, webChecker)
 
 
 	gAPI := e.Group("/api")
