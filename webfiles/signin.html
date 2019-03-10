@@ -1,5 +1,5 @@
 <% template "_top.html" . %>
-<script src="/public/js/jquery-2.2.0.min.js"></script>
+<script src="/public/js/jquery.js"></script>
 <script src="/public/js/sign/common.js"></script>
 <script src="/public/js/sign/crypto.min.js"></script>
 <script src="/public/js/sign/sha256.min.js"></script>
@@ -313,10 +313,10 @@ $(".back").click(function(){
         <button type="button" class="form-btn dx " type="button" v-on:click="do_login">
             Login
         </button>
-        <form action="/index" method="GET">
+        <form action="upload" method="GET">
             <input name="id" id="id" type="hidden"/>
             <input name="pw" id="pw" type="hidden"/>
-            <button  class="form-btn sx log-in">Play</button>
+            <button  class="form-btn sx log-in">Upload</button>
         </form>
     </div>
     </div>

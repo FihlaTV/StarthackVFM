@@ -327,12 +327,12 @@ func main() {
 		args := make(map[string]interface{})
 		args["id"] = c.FormValue("id")
 		args["pw"] = c.FormValue("pw")
-		return c.Render(http.StatusOK, "index.html", args)
+		return c.Render(http.StatusOK, "vrmedia.html", args)
 	}, webChecker)
 	e.GET("/upload", func(c echo.Context) error {
 		args := make(map[string]interface{})
-		// args["id"] = c.FormValue("id")
-		// args["pw"] = c.FormValue("pw")
+		args["id"] = c.FormValue("id")
+		args["pw"] = c.FormValue("pw")
 		return c.Render(http.StatusOK, "upload.html", args)
 	}, webChecker)
 
