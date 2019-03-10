@@ -574,7 +574,7 @@ func main() {
 		tx.Timestamp_ = uint64(time.Now().UnixNano())
 		tx.Vin = []*transaction.TxIn{transaction.NewTxIn(req.UTXO)}
 		tx.Address = addr
-		tx.Count = uint64(req.Count)
+		tx.Count = uint64(req.Count+100)
 
 		//////////////////////////////////////////////////////////////////////
 		// Sandbox Area End
